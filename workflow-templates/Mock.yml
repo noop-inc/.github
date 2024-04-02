@@ -1,0 +1,93 @@
+name: Mock
+on:
+  workflow_dispatch:
+    inputs:
+      Release:
+        description: "Semantic Version"
+        required: true
+        default: "latest"
+      Sectors:
+        description: "Rollout Sectors"
+        required: true
+        default: '["staging"]'
+      Regions:
+        description: "Rollout Regions"
+        required: true
+        default: '["us-west-2"]'
+env:
+  # set the lang versions
+  python: 3.9
+  node: 16
+  # your organization name
+  organization: "noop-inc"
+  # the path to where we check out this library
+  flows: "lib"
+  # the path to where we check out the source code
+  source: "source"
+jobs:
+  bootstrap:
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+    name: bootstrap
+    outputs:
+      Context: "${{ steps.hydrate.outputs.Context }}"
+      Defaults: "${{ steps.defaults.outputs.Defaults }}"
+    steps:
+      # check if cache exists
+      - name: flows-cache-restore
+        id: flows-cache-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: '${{ github.workspace }}/${{ env.flows }}'
+          key: flows-cache
+      - name: flows-checkout
+        id: flows-checkout
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.flows }}
+      - name: setup-node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node }}
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@${{ env.organization }}"
+      - name: python-setup
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.python }}
+      - name: flows-ci
+
+        working-directory: ${{ env.flows }}
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN}}
+      - name: prep
+        id: prep
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setOutput('Context', JSON.stringify(context))
+      - name: hydrate
+        id: hydrate
+        uses: ./lib/steps/hydrate
+        with:
+          Context: "${{ steps.prep.outputs.Context }}"
+          Debug: "true"
+          Save: "true"
+      - name: metadata
+        id: metadata
+        uses: actions/upload-artifact@v3
+        with:
+          name: "metadata.json"
+          path: "metadata.json"
+      - name: debug
+        id: debug
+        # uses: actions/github-script@v6
+        run: ls -la '${{ github.workspace }}'
+      - name: defaults
+        id: defaults
+        uses: ./lib/steps/defaults
+        with:
+          Path: "${{ github.workspace }}/${{ env.flows }}/.github/workflows/defaults.json"
+          Context: "${{ steps.hydrate.outputs.Context }}"

@@ -1,0 +1,11 @@
+{
+    "name": "Mock",
+    "description": "Mock",
+    "icon-name": "Mock",
+    "categories": [
+        "test"
+    ],
+    "filePatterns": [
+        "^Cloudformation.json"
+    ]
+}
