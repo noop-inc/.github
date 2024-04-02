@@ -3,7 +3,7 @@
     "description": "Mock",
     "icon-name": "Mock",
     "categories": [
-        "test"
+        "continuous-integration"
     ],
     "filePatterns": [
         "^Cloudformation.json"
